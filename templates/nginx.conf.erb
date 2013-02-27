@@ -1,10 +1,10 @@
-user  <%= scope.lookupvar('webserver::params::nginx_service_user') %>;
-worker_processes  <%= scope.lookupvar('webserver::params::nginx_worker_processes') %>;
-error_log <%= scope.lookupvar('webserver::params::nginx_service_log_path') %>error.log;
+user  <%= scope.lookupvar('nginx::params::service_user') %>;
+worker_processes  <%= scope.lookupvar('nginx::params::worker_processes') %>;
+error_log <%= scope.lookupvar('nginx::params::service_log_path') %>error.log;
 
 
 events {
-    worker_connections  <%= scope.lookupvar('webserver::params::nginx_worker_connections') %>;
+    worker_connections  <%= scope.lookupvar('nginx::params::worker_connections') %>;
     use epoll;
     multi_accept on;
 }
@@ -12,10 +12,10 @@ events {
 
 http {
     include                         mime.types;
-    default_type                    <%= scope.lookupvar('webserver::params::nginx_default_type') %>;
-    server_names_hash_bucket_size   <%= scope.lookupvar('webserver::params::nginx_server_names_hash_bucket_size') %>;
-    sendfile                        <%= scope.lookupvar('webserver::params::nginx_sendfile') %>;
-    server_tokens                   <%= scope.lookupvar('webserver::params::nginx_server_tokens') %>;
+    default_type                    <%= scope.lookupvar('nginx::params::default_type') %>;
+    server_names_hash_bucket_size   <%= scope.lookupvar('nginx::params::server_names_hash_bucket_size') %>;
+    sendfile                        <%= scope.lookupvar('nginx::params::sendfile') %>;
+    server_tokens                   <%= scope.lookupvar('nginx::params::server_tokens') %>;
     
     # Caches information about open FDs, freqently accessed files.
     # Changing this setting, in my environment, brought performance up from 560k req/sec, to 904k req/sec.
@@ -54,14 +54,14 @@ http {
     ### restricts the amount of connections from a single ip address ###
     #limit_conn slimits 5;
     # Compression tweaks                                                                                                                                                   
-    gzip                            <%= scope.lookupvar('webserver::params::nginx_gzip') %>;
-    gzip_min_length                 <%= scope.lookupvar('webserver::params::nginx_gzip_min_length') %>;
-    gzip_buffers                    <%= scope.lookupvar('webserver::params::nginx_gzip_buffers') %>;
-    gzip_comp_level                 <%= scope.lookupvar('webserver::params::nginx_gzip_comp_level') %>;
-    gzip_http_version               <%= scope.lookupvar('webserver::params::nginx_gzip_http_version') %>;
-    gzip_proxied                    <%= scope.lookupvar('webserver::params::nginx_gzip_proxied') %>;
+    gzip                            <%= scope.lookupvar('nginx::params::gzip') %>;
+    gzip_min_length                 <%= scope.lookupvar('nginx::params::gzip_min_length') %>;
+    gzip_buffers                    <%= scope.lookupvar('nginx::params::gzip_buffers') %>;
+    gzip_comp_level                 <%= scope.lookupvar('nginx::params::gzip_comp_level') %>;
+    gzip_http_version               <%= scope.lookupvar('nginx::params::gzip_http_version') %>;
+    gzip_proxied                    <%= scope.lookupvar('nginx::params::gzip_proxied') %>;
     gzip_disable                    "MSIE [1-6]\.";
-    gzip_types                      <%= scope.lookupvar('webserver::params::nginx_gzip_types') %>;
+    gzip_types                      <%= scope.lookupvar('nginx::params::gzip_types') %>;
 
     # Default vhost
     server {
@@ -71,24 +71,24 @@ http {
         location / {
             return 404;
         }
-        error_page 404 <%= scope.lookupvar('webserver::params::nginx_service_404_page') %>;
+        error_page 404 <%= scope.lookupvar('nginx::params::service_404_page') %>;
     }
     server {
         # Vitualhost for internal services
         listen 80;
         server_name <%= hostname %> <%= fqdn %>;
-        access_log <%= scope.lookupvar('webserver::params::nginx_service_log_path') %><%= hostname %>_nginx-access.log;
+        access_log <%= scope.lookupvar('nginx::params::service_log_path') %><%= hostname %>_nginx-access.log;
         location / {
-            proxy_pass          http://localhost:<%= scope.lookupvar('webserver::params::apache_port') %>;
+            proxy_pass          http://localhost:<%= scope.lookupvar('nginx::params::apache_port') %>;
             proxy_redirect      off;
             proxy_set_header    Host                $host;
             proxy_set_header    X-Real-IP           $remote_addr;
             proxy_set_header    X-Forwarded-For     $proxy_add_x_forwarded_for;
         }
-        location /nginx_status { 
+        location /status { 
             stub_status on;
             access_log off;
         }
     }
-    include <%= scope.lookupvar('webserver::params::nginx_service_vhosts_dir') %>*.conf;
+    include <%= scope.lookupvar('nginx::params::service_vhosts_dir') %>*.conf;
 }

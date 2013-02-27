@@ -1,7 +1,7 @@
 server {
     listen 80;
     server_name <%= name %> www.<%= name %><% serveraliases.each do |name| -%><%= " #{name} www.#{name}" %><% end -%>;
-    access_log <%= nginx_service_log_path %><%= name %>_nginx-access.log;
+    access_log <%= service_log_path %><%= name %>_nginx-access.log;
     ## Only allow these request methods ##
     if ($request_method !~ ^(GET|HEAD|POST)$ ) {
          return 444;
@@ -10,15 +10,8 @@ server {
     if ($http_user_agent ~* LWP::Simple|BBBike|Wget) {
         return 403;
     }
-    ##
-    ## Deny certain Referers ###
-    # This rule brakes too many things, such as sexybookmarks plugin, etc.
-    #if ( $http_referer ~* (babes|forsale|girl|jewelry|love|nudit|organic|poker|porn|sex|teen) ) {
-    #    # return 404;
-    #    return 403;
-    #}
-    ##
     location / {
+        # Pass all requests to backend (eg apache)
         proxy_pass          http://localhost:<%= apache_port %>;
         proxy_redirect      off;
         proxy_set_header    Host                $host;
@@ -30,11 +23,15 @@ server {
         <% end %>
     }
     location ~* ^.+\.(jpg|jpeg|gif|swf|png|ico|mp3|css|zip|tgz|gz|rar|bz2|doc|xls|exe|pdf|dat|avi|ppt|txt|tar|mid|midi|wav|bmp|rtf|wmv|mpeg|mpg|mp4|m4a|spx|ogx|ogv|oga|webm|weba|ogg|tbz|js|html|htm)$ {
-        root /var/www/<%= name %>/httpdocs;
+        # Serve static file by nginx
+        root <%= root_dir %><%= name %>/httpdocs;
+        # Set expires for static files to 7 days (recommended by https://developers.google.com/speed/pagespeed/)
         expires 7d;
         add_header Pragma public;
         add_header Cache-Control "public";
+        # If not found - back to apache
         error_page 404 = @fallback;
+        # Do not log 404 (eg favicon.ico and others)
         log_not_found off;
     }
     location @fallback {

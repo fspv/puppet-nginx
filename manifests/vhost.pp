@@ -1,6 +1,9 @@
 define nginx::vhost(
         $serveraliases              = '',
+        $apache_port                = 8080,
+        $http_base_auth             = false,
         $root_dir                   = $nginx::params::root_dir,
+        $service_log_path           = $nginx::params::service_log_path,
     )
 {
     file { "${nginx::params::service_vhosts_dir}${name}.conf":

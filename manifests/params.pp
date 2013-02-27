@@ -1,4 +1,6 @@
 class nginx::params {
+    # Default apache port can be overwritten in main class
+    $apache_port                              = $nginx::apache_port
     # nginx.conf params
     $worker_processes                         = 8 #number of proccessors (cores)
     $worker_connections                       = 1024
