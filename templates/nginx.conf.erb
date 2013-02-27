@@ -1,0 +1,94 @@
+user  <%= scope.lookupvar('webserver::params::nginx_service_user') %>;
+worker_processes  <%= scope.lookupvar('webserver::params::nginx_worker_processes') %>;
+error_log <%= scope.lookupvar('webserver::params::nginx_service_log_path') %>error.log;
+
+
+events {
+    worker_connections  <%= scope.lookupvar('webserver::params::nginx_worker_connections') %>;
+    use epoll;
+    multi_accept on;
+}
+
+
+http {
+    include                         mime.types;
+    default_type                    <%= scope.lookupvar('webserver::params::nginx_default_type') %>;
+    server_names_hash_bucket_size   <%= scope.lookupvar('webserver::params::nginx_server_names_hash_bucket_size') %>;
+    sendfile                        <%= scope.lookupvar('webserver::params::nginx_sendfile') %>;
+    server_tokens                   <%= scope.lookupvar('webserver::params::nginx_server_tokens') %>;
+    
+    # Caches information about open FDs, freqently accessed files.
+    # Changing this setting, in my environment, brought performance up from 560k req/sec, to 904k req/sec.
+    # I recommend using some varient of these options, though not the specific values listed below.
+    open_file_cache max=200000 inactive=20s;
+    open_file_cache_valid 30s;
+    open_file_cache_min_uses 2;
+    open_file_cache_errors on;
+    # Tcp_nopush causes nginx to attempt to send its HTTP response head in one packet,
+    # instead of using partial frames. This is useful for prepending headers before calling sendfile,
+    # or for throughput optimization.
+    tcp_nopush on;
+    # don't buffer data-sends (disable Nagle algorithm). Good for sending frequent small bursts of data in real time.
+    tcp_nodelay on;
+
+    # To prevent error 413 set this parameter as high as possible
+    client_max_body_size            32m;
+    ## Start: Size Limits & Buffer Overflows ##
+    #client_body_buffer_size  1K;
+    #client_header_buffer_size 1k;
+    #large_client_header_buffers 2 1k;
+    ## END: Size Limits & Buffer Overflows ##
+    ## Start: Timeouts ##
+    reset_timedout_connection on;
+    client_body_timeout   10;
+    client_header_timeout 10;
+    keepalive_timeout     5 5;
+    send_timeout          10;
+    # Эта секция выключена, т.к. имеет смысл только на внешнем прокси, на внутреннем все ip одинаковые
+    # и будет, скорее всего, блокировать всех!
+    ## End: Timeouts ##
+    ### Directive describes the zone, in which the session states are stored i.e. store in slimits. ###
+    ### 1m can handle 32000 sessions with 32 bytes/session, set to 5m x 32000 session ###
+    #limit_zone slimits $binary_remote_addr 5m;
+    ### Control maximum number of simultaneous connections for one session i.e. ###
+    ### restricts the amount of connections from a single ip address ###
+    #limit_conn slimits 5;
+    # Compression tweaks                                                                                                                                                   
+    gzip                            <%= scope.lookupvar('webserver::params::nginx_gzip') %>;
+    gzip_min_length                 <%= scope.lookupvar('webserver::params::nginx_gzip_min_length') %>;
+    gzip_buffers                    <%= scope.lookupvar('webserver::params::nginx_gzip_buffers') %>;
+    gzip_comp_level                 <%= scope.lookupvar('webserver::params::nginx_gzip_comp_level') %>;
+    gzip_http_version               <%= scope.lookupvar('webserver::params::nginx_gzip_http_version') %>;
+    gzip_proxied                    <%= scope.lookupvar('webserver::params::nginx_gzip_proxied') %>;
+    gzip_disable                    "MSIE [1-6]\.";
+    gzip_types                      <%= scope.lookupvar('webserver::params::nginx_gzip_types') %>;
+
+    # Default vhost
+    server {
+        listen 80 default;
+        # <%= fqdn %>
+        server_name _;
+        location / {
+            return 404;
+        }
+        error_page 404 <%= scope.lookupvar('webserver::params::nginx_service_404_page') %>;
+    }
+    server {
+        # Vitualhost for internal services
+        listen 80;
+        server_name <%= hostname %> <%= fqdn %>;
+        access_log <%= scope.lookupvar('webserver::params::nginx_service_log_path') %><%= hostname %>_nginx-access.log;
+        location / {
+            proxy_pass          http://localhost:<%= scope.lookupvar('webserver::params::apache_port') %>;
+            proxy_redirect      off;
+            proxy_set_header    Host                $host;
+            proxy_set_header    X-Real-IP           $remote_addr;
+            proxy_set_header    X-Forwarded-For     $proxy_add_x_forwarded_for;
+        }
+        location /nginx_status { 
+            stub_status on;
+            access_log off;
+        }
+    }
+    include <%= scope.lookupvar('webserver::params::nginx_service_vhosts_dir') %>*.conf;
+}

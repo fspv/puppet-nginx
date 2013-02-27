@@ -1,0 +1,17 @@
+<?php
+if(isset($_COOKIE['xhprof'])){
+    if (extension_loaded('xhprof')) {
+        $profiler_namespace = $_SERVER['SERVER_NAME']; // namespace for your application
+        $xhprof_data = xhprof_disable();
+        $xhprof_runs = new XHProfRuns_Default();
+        $run_id = $xhprof_runs->save_run($xhprof_data, $profiler_namespace);
+        // url to the XHProf UI libraries (change the host name and path)
+        $profiler_url = sprintf('http://<%= fqdn %>/xhprof/?run=%s&source=%s', $run_id, $profiler_namespace);
+        $actual_link = "http://$_SERVER[HTTP_HOST]$_SERVER[REQUEST_URI]";
+        error_log("Xhprof output for ".$actual_link." can be found here ".$profiler_url);
+echo <<<OUT
+        <a href='$profiler_url'>Profiler output</a>
+OUT;
+    }
+}
+

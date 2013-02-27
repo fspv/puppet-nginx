@@ -1,0 +1,38 @@
+<VirtualHost localhost:<%= apache_port %>>
+    ServerName <%= name %>
+    ServerAlias www.<%= name %>
+<% serveraliases.each do |name| -%><%= "    ServerAlias #{name}\n    ServerAlias www.#{name}\n" %><% end -%>
+    AddDefaultCharset   <% if charsetdefault == '' %>UTF-8<% else %><%= charsetdefault %><% end %>
+    DocumentRoot        <%= root_dir %><%= name %>/httpdocs
+    ServerAdmin         <%= apache_server_admin %>
+    <IfModule mod_log_config.c>
+        CustomLog <%= apache_service_log_path %><%= name %>_apache-access.log combined
+        ErrorLog <%= apache_service_log_path %><%= name %>_apache-error.log
+    </IfModule>
+    <IfModule mod_mime.c>
+        AddType application/x-httpd-php .php
+        AddType text/html .shtml .html .htm .expired
+    </IfModule>
+    <IfModule mod_charset.c>
+        CharsetSourceEnc <% if charsetsourceenc == '' %>UTF-8<% else %><%= charsetsourceenc %><% end %>
+        CharsetDefault <% if charsetdefault == '' %>UTF-8<% else %><%= charsetdefault %><% end %>
+        CharsetPriority <% if charsetpriority == '' %>UTF-8 windows-1251 koi8-r ISO-8859-5 ibm866<% else %><%= charsetpriority %><% end %>
+    </IfModule>
+    <IfModule mod_dir.c>
+        DirectoryIndex index.expired index.php index.html index.htm
+    </IfModule>
+    php_value include_path ".:<%= root_dir %><%= name %>/httpdocs"
+    php_value default_charset <% if php_default_charset == '' %>UTF-8<% else %><%= php_default_charset %><% end %>
+    php_admin_value open_basedir "<%= php_open_basedir_default %>:<%= root_dir %><%= name %>/<%= php_open_basedir %>"
+    php_admin_value error_log "<%= apache_service_log_path %><%= name %>_php-error.log"
+    php_admin_value safe_mode 0
+    php_admin_flag safe_mode_gid on
+    php_admin_flag expose_php off
+    php_admin_flag register_globals off
+    php_admin_flag display_errors off
+    <Directory /var/www/<%= name %>/httpdocs>
+        php_admin_value sendmail_path "/usr/sbin/sendmail -t -i -fno-reply@<%= name %>"
+        Options FollowSymLinks
+        AllowOverride AuthConfig FileInfo Options
+    </Directory>
+</VirtualHost>

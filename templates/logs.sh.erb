@@ -1,0 +1,21 @@
+#!/bin/sh
+export PATH='/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin'
+if [ $# -ne 1 ]
+then
+    echo Content-type: text/html
+    echo ""
+    echo "<table border=1><tbody>"
+    for file in $(ls <%= scope.lookupvar('webserver::params::apache_service_log_path') %>*.log; ls <%= scope.lookupvar('webserver::params::apache_service_log_path') %>*.log; ls /var/log/mail.*)
+    do
+        SIZE=$(ls -lah ${file} | awk '{print $5}')
+        echo "<tr><td><a href=?${file}>${file}</a></td><td>${SIZE}</td></tr>"
+    done
+    echo "</tbody></table>"
+else
+    echo Content-type: text/plain
+    echo ""
+    echo "You are in log file ${1}. There is last 20 errors shown."
+    echo ""
+    echo ""
+    tail -n20 $1
+fi
